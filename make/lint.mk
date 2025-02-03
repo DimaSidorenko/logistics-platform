@@ -36,8 +36,8 @@ lint-cart:
 lint-loms:
 	$(call lint,loms)
 
-lint-loms:
+lint-notifier:
 	$(call lint,notifier)
 
-lint-loms:
+lint-comments:
 	$(call lint,comments)
