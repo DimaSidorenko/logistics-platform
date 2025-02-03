@@ -1,7 +1,7 @@
 CURDIR=$(shell pwd)
 BINDIR=${CURDIR}/bin
 GOVER=$(shell go version | perl -nle '/(go\d\S+)/; print $$1;')
-LINTVER=v1.62.1
+LINTVER=v1.62.2
 LINTBIN=${BINDIR}/lint_${GOVER}_${LINTVER}
 
 
