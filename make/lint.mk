@@ -2,7 +2,7 @@ CURDIR=$(shell pwd)
 BINDIR=${CURDIR}/bin
 GOVER=$(shell go version | perl -nle '/(go\d\S+)/; print $$1;')
 LINTVER=v1.62.2
-LINTBIN=${GOPATH}/bin
+LINTBIN=golangci-lint
 
 
 bindir:
