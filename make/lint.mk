@@ -31,13 +31,13 @@ endef
 
 
 lint-cart:
-	$(call lint,cart)
+	LINTBIN=${GOPATH}/bin $(call lint,cart)
 
 lint-loms:
-	$(call lint,loms)
+	LINTBIN=${GOPATH}/bin $(call lint,loms)
 
 lint-notifier:
-	$(call lint,notifier)
+	LINTBIN=${GOPATH}/bin $(call lint,notifier)
 
 lint-comments:
-	$(call lint,comments)
+	LINTBIN=${GOPATH}/bin $(call lint,comments)
