@@ -1,4 +1,4 @@
 include:
-  - project: 'go/classroom-14/experts/course-project'
-    ref: hw-5
+  - project: 'go/classroom-16/students/base'
+    ref: master
     file: '.gitlab-ci.yml'
