@@ -6,3 +6,7 @@ bindir:
 
 build: bindir
 	echo "build comments"
+
+
+run-migrations:
+	echo "run migrations"

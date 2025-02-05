@@ -6,3 +6,6 @@ bindir:
 
 build: bindir
 	echo "build loms"
+
+run-migrations:
+	echo "run migrations"
