@@ -2,7 +2,7 @@ CURDIR=$(shell pwd)
 BINDIR=${CURDIR}/bin
 GOVER=$(shell go version | perl -nle '/(go\d\S+)/; print $$1;')
 LINTVER=v1.62.2
-LINTBIN=${BINDIR}/lint_${GOVER}_${LINTVER}
+LINTBIN=LINTBIN=${GOPATH}/bin
 
 
 bindir:
@@ -31,13 +31,13 @@ endef
 
 
 lint-cart:
-	LINTBIN=${GOPATH}/bin $(call lint,cart)
+	$(call lint,cart)
 
 lint-loms:
-	LINTBIN=${GOPATH}/bin $(call lint,loms)
+	$(call lint,loms)
 
 lint-notifier:
-	LINTBIN=${GOPATH}/bin $(call lint,notifier)
+	$(call lint,notifier)
 
 lint-comments:
-	LINTBIN=${GOPATH}/bin $(call lint,comments)
+	$(call lint,comments)
