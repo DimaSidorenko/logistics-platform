@@ -1,9 +1,6 @@
 include make/lint.mk
 include make/build.mk
 
-lint: lint-cart lint-loms lint-notifier lint-comments
+lint: cart-lint loms-lint notifier-lint comments-lint
 
-build: build
-
-
-#run
+build: cart-build loms-build notifier-build comments-build

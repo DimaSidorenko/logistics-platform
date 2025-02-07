@@ -30,14 +30,14 @@ define lint
 endef
 
 
-lint-cart:
+cart-lint:
 	$(call lint,cart)
 
-lint-loms:
+loms-lint:
 	$(call lint,loms)
 
-lint-notifier:
+notifier-lint:
 	$(call lint,notifier)
 
-lint-comments:
+comments-lint:
 	$(call lint,comments)
