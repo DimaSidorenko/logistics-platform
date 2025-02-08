@@ -98,7 +98,10 @@
 ## Troubleshooting
 1. Чтобы запустить product-service локально требуется выполнить команду
 
-```docker login gitlab-registry.ozon.dev```
+```
+docker login gitlab-registry.ozon.dev
+```
+ логин и пароль такие-же, как для доступа к https://gitlab.ozon.dev/
 
 2. Если при прохождении джобы с тестами вы получаете ошибку
 ```
