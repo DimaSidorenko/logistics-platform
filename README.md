@@ -105,6 +105,6 @@ docker login gitlab-registry.ozon.dev
 
 2. Если при прохождении джобы с тестами вы получаете ошибку
 ```
-ERROR: Job failed: failed to pull image "gitlab-registry.ozon.dev/go/classroom-16/experts/product-service:v3" with specified policies [always]: Error response from daemon: pull access denied for gitlab-registry.ozon.dev/go/classroom-16/experts/product-service, repository does not exist or may require 'docker login': denied: requested access to the resource is denied
+ERROR: Job failed: failed to pull image "gitlab-registry.ozon.dev/go/...." with specified policies [always]: Error response from daemon: pull access denied for gitlab-registry.ozon.dev/go/...., repository does not exist or may require 'docker login': denied: requested access to the resource is denied
 ```
 напишите об этом тьютору, чтобы он сделал необходимые настройки. После подтверждения от тьютора, что работы проведены - просто перезапустите пайплайн
