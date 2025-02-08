@@ -94,3 +94,17 @@
 объединение коммитов с исправлениями в один перед повторной отправкой тьютору на повторную. Таким образом количество
 коммитов в ветке будет соответствовать количеству итераций проверки. Мы не считаем количество коммитов и не оцениваем
 работу по этому признаку. Сказанное выше является рекомендацией, но не требованием.
+
+## Troubleshooting
+1. Чтобы запустить product-service локально требуется выполнить команду
+
+```
+docker login gitlab-registry.ozon.dev
+```
+ логин и пароль такие-же, как для доступа к https://gitlab.ozon.dev/
+
+2. Если при прохождении джобы с тестами вы получаете ошибку
+```
+ERROR: Job failed: failed to pull image "gitlab-registry.ozon.dev/go/classroom-16/experts/product-service:v3" with specified policies [always]: Error response from daemon: pull access denied for gitlab-registry.ozon.dev/go/classroom-16/experts/product-service, repository does not exist or may require 'docker login': denied: requested access to the resource is denied
+```
+напишите об этом тьютору, чтобы он сделал необходимые настройки. После подтверждения от тьютора, что работы проведены - просто перезапустите пайплайн
