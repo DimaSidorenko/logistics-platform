@@ -34,6 +34,15 @@ linters:
   enable:
     - gocognit # : Computes and checks the cognitive complexity of functions [fast: true, auto-fix: false]
     - gocyclo # : Computes and checks the cyclomatic complexity of functions [fast: true, auto-fix: false]
+    - errcheck
+    - goconst
+    - goimports
+    - gosec
+    - govet
+    - ineffassign
+    - megacheck # (staticcheck + gosimple + unused in one linter)
+    - revive
+    - typecheck
     - unused
 
 issues:
