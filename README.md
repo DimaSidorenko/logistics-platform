@@ -18,8 +18,8 @@
 
 Для работы над курсовым проектом необходимо выполнить инициализацию репозитория:
 
-1. Открыть репозиторий https://gitlab.ozon.dev/go/classroom-16/students/homework (вы уже в нем);
-2. Создать копию данного репозитория https://gitlab.ozon.dev/go/classroom-16/students/homework (форк проекта в свой 
+1. Открыть репозиторий https://gitlab.ozon.dev/go/classroom-16/students/homework-draft (вы уже в нем);
+2. Создать копию данного репозитория https://gitlab.ozon.dev/go/classroom-16/students/homework-draft (форк проекта в свой 
   приватный репозиторий (см. рис. 1));
 3. Разорвать связь с шаблонным репозиторием, для этого в GitLab необходимо выполнить: Settings › Advanced › Remove
   fork relationship (см. рис. 2 и 3);
