@@ -1,8 +1,8 @@
 CURDIR=$(shell pwd)
 BINDIR=${CURDIR}/bin
 GOVER=$(shell go version | perl -nle '/(go\d\S+)/; print $$1;')
-LINTVER=v1.62.2
-LINTBIN=golangci-lint
+LINTVER=v1.60.3
+LINTBIN=bin/golangci-lint
 
 
 bindir:
@@ -16,7 +16,7 @@ install-lint: bindir
 
 define lint
 	@if [ -f "$(1)/go.mod" ]; then \
-		output=$$(${LINTBIN} --config=.golangci.yaml run $(1) 2>&1); \
+		output=$$(${LINTBIN} --config=.golangci.yaml run $(1)/... 2>&1); \
 		exit_code=$$?; \
 		echo "$$output"; \
 		if [ $$exit_code -ne 0 ]; then \
