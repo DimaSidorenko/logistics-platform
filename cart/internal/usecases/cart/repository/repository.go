@@ -1,60 +1,79 @@
 package repository
 
 import (
-	"route256/cart/internal/usecases/cart/dto"
+	cartDto "route256/cart/internal/usecases/cart/dto"
 	"sync"
 )
 
 type ConcurrentMap struct {
 	mu      sync.RWMutex
-	storage map[dto.UserID]map[dto.SkuID]uint32
+	storage map[cartDto.UserID]map[cartDto.SkuID]uint32
 }
 
 func NewConcurrentMap() *ConcurrentMap {
 	return &ConcurrentMap{
-		storage: make(map[dto.UserID]map[dto.SkuID]uint32),
+		storage: make(map[cartDto.UserID]map[cartDto.SkuID]uint32),
 	}
 }
 
-func (m *ConcurrentMap) Set(userID dto.UserID, skuID dto.SkuID, quantity uint32) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (c *ConcurrentMap) GetItem(userID cartDto.UserID, skuID cartDto.SkuID) (uint32, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
-	if _, ok := m.storage[userID]; !ok {
-		m.storage[userID] = make(map[dto.SkuID]uint32)
+	userCart, exists := c.storage[userID]
+	if !exists {
+		return 0, false
 	}
-	m.storage[userID][skuID] += quantity
+	quantity, found := userCart[skuID]
+	return quantity, found
 }
 
-func (m *ConcurrentMap) DeleteItem(userID dto.UserID, skuID dto.SkuID) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (c *ConcurrentMap) GetItems(userID cartDto.UserID) ([]cartDto.Item, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
-	if userCart, ok := m.storage[userID]; ok {
-		delete(userCart, skuID)
+	userCart, exists := c.storage[userID]
+	if !exists {
+		return nil, nil
 	}
+
+	items := make([]cartDto.Item, 0, len(userCart))
+	for skuID, quantity := range userCart {
+		items = append(items, cartDto.Item{Sku: skuID, Count: quantity})
+	}
+	return items, nil
 }
 
-func (m *ConcurrentMap) DeleteUser(userID dto.UserID) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (c *ConcurrentMap) AddItem(userID cartDto.UserID, skuID cartDto.SkuID, quantity uint32) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	delete(m.storage, userID)
+	if _, exists := c.storage[userID]; !exists {
+		c.storage[userID] = make(map[cartDto.SkuID]uint32)
+	}
+	c.storage[userID][skuID] += quantity
+	return nil
 }
 
-func (m *ConcurrentMap) Get(userID dto.UserID) (map[dto.SkuID]uint32, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (c *ConcurrentMap) DeleteItem(userID cartDto.UserID, skuID cartDto.SkuID) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	userCart, ok := m.storage[userID]
-	if !ok {
-		return nil, false
+	userCart, exists := c.storage[userID]
+	if !exists {
+		return nil
 	}
-
-	cartCopy := make(map[dto.SkuID]uint32, len(userCart))
-	for k, v := range userCart {
-		cartCopy[k] = v
+	delete(userCart, skuID)
+	if len(userCart) == 0 {
+		delete(c.storage, userID)
 	}
+	return nil
+}
 
-	return cartCopy, true
+func (c *ConcurrentMap) DeleteUser(userID cartDto.UserID) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.storage, userID)
+	return nil
 }

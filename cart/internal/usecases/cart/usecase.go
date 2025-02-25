@@ -1,91 +1,101 @@
+//go:generate minimock -i=storage
+//go:generate minimock -i=productClient
+
 package cart
 
 import (
-	"errors"
-	dto2 "route256/cart/internal/usecases/cart/dto"
+	"fmt"
+	"route256/cart/internal/models"
+	cartDto "route256/cart/internal/usecases/cart/dto"
 )
 
-var storage = map[dto2.UserID]map[dto2.SkuID]uint32{}
+type storage interface {
+	GetItem(userID cartDto.UserID, skuID cartDto.SkuID) (quantity uint32, found bool)
+	AddItem(userID cartDto.UserID, skuID cartDto.SkuID, quantity uint32) error
+	DeleteItem(userID cartDto.UserID, skuID cartDto.SkuID) error
+	DeleteUser(userID cartDto.UserID) error
+	GetItems(userID cartDto.UserID) ([]cartDto.Item, error)
+}
 
 type productClient interface {
-	GetItem(skuID dto2.SkuID) (dto2.Product, error)
+	GetItem(skuID int64) (models.Product, error)
 }
 
 type Handler struct {
 	productClient productClient
+	storage       storage
 }
 
-func NewHandler(productClient productClient) *Handler {
+func NewHandler(productClient productClient, storage storage) *Handler {
 	return &Handler{
 		productClient: productClient,
+		storage:       storage,
 	}
 }
 
-func (c *Handler) AddItem(userID dto2.UserID, skuID dto2.SkuID, quantity uint32) error {
+func (c *Handler) AddItem(userID cartDto.UserID, skuID cartDto.SkuID, quantity uint32) error {
 	if err := c.validateItem(skuID); err != nil {
-		return err
+		return fmt.Errorf("validate item: %v", err)
 	}
 
-	if userCart, ok := storage[userID]; ok {
-		userCart[skuID] = userCart[skuID] + quantity
-	} else {
-		storage[userID] = map[dto2.SkuID]uint32{
-			skuID: quantity,
-		}
+	if err := c.storage.AddItem(userID, skuID, quantity); err != nil {
+		return fmt.Errorf("add item: %v", err)
 	}
 
 	return nil
 }
 
-func (c *Handler) DeleteItem(userID dto2.UserID, skuID dto2.SkuID) error {
-	if userCart, ok := storage[userID]; ok {
-		delete(userCart, skuID)
+func (c *Handler) DeleteItem(userID cartDto.UserID, skuID cartDto.SkuID) error {
+	if err := c.storage.DeleteItem(userID, skuID); err != nil {
+		return fmt.Errorf("delete item: %v", err)
 	}
 
 	return nil
 }
 
-func (c *Handler) DeleteUser(userID dto2.UserID) error {
-	delete(storage, userID)
+func (c *Handler) DeleteUser(userID cartDto.UserID) error {
+	if err := c.storage.DeleteUser(userID); err != nil {
+		return fmt.Errorf("delete item: %v", err)
+	}
 
 	return nil
 }
 
-func (c *Handler) GetItems(userID dto2.UserID) (dto2.GetItemsResponse, error) {
-	if _, ok := storage[userID]; !ok {
-		return dto2.GetItemsResponse{}, dto2.ErrUserNotFound
+func (c *Handler) GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, error) {
+	items, err := c.storage.GetItems(userID)
+	if err != nil {
+		return cartDto.GetItemsResponse{}, fmt.Errorf("get items: %v", err)
 	}
 
-	result := make([]dto2.Item, 0, len(storage))
+	if len(items) == 0 {
+		return cartDto.GetItemsResponse{}, cartDto.ErrUserNotFound
+	}
+
+	result := make([]cartDto.Item, 0, len(items))
 	var totalPrice uint32
-	for skuID, quantity := range storage[userID] {
-		item, err := c.productClient.GetItem(skuID)
+	for _, repoItem := range items {
+		item, err := c.productClient.GetItem(int64(repoItem.Sku))
 		if err != nil {
-			if errors.Is(err, dto2.ErrItemNotFound) {
-				continue
-			}
-
-			return dto2.GetItemsResponse{}, err
+			return cartDto.GetItemsResponse{}, fmt.Errorf("get item in product service: %v", err)
 		}
 
 		price := uint32(item.Price)
-		result = append(result, dto2.Item{
-			Sku:   int64(skuID),
+		result = append(result, cartDto.Item{
+			Sku:   repoItem.Sku,
+			Count: repoItem.Count,
 			Name:  item.Name,
-			Count: quantity,
 			Price: price,
 		})
-
-		totalPrice += price * quantity
+		totalPrice += price * repoItem.Count
 	}
 
-	return dto2.GetItemsResponse{
+	return cartDto.GetItemsResponse{
 		Items:      result,
 		TotalPrice: totalPrice,
 	}, nil
 }
 
-func (c *Handler) validateItem(skuID dto2.SkuID) error {
-	_, err := c.productClient.GetItem(skuID)
+func (c *Handler) validateItem(skuID cartDto.SkuID) error {
+	_, err := c.productClient.GetItem(int64(skuID))
 	return err
 }
