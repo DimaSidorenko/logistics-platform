@@ -54,7 +54,7 @@ func convertResponse(response cartDto.GetItemsResponse) (out GetItemsResponse) {
 	out.Items = make([]Item, len(response.Items))
 	for i := range response.Items {
 		out.Items[i] = Item{
-			Sku:   response.Items[i].Sku,
+			Sku:   int64(response.Items[i].Sku),
 			Name:  response.Items[i].Name,
 			Count: response.Items[i].Count,
 			Price: response.Items[i].Price,
