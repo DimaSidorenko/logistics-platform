@@ -18,10 +18,10 @@ type ProductClient struct {
 	token  string
 }
 
-func NewProductClient(client *http.Client, host string, port int, token string) *ProductClient {
+func NewProductClient(client *http.Client, url, token string) *ProductClient {
 	return &ProductClient{
 		client: client,
-		url:    fmt.Sprintf("http://%s:%d", host, port),
+		url:    url,
 		token:  token,
 	}
 }

@@ -26,8 +26,7 @@ func main() {
 
 	productClient := product.NewProductClient(
 		&http.Client{Transport: round_trippers.NewRetryRoundTripper(http.DefaultTransport, 3)},
-		config.ProductService.Host,
-		config.ProductService.Port,
+		fmt.Sprintf("http://%s:%d", config.ProductService.Host, config.ProductService.Port),
 		config.ProductService.Token,
 	)
 
