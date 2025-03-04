@@ -8,7 +8,7 @@ database StocksStorage as ss
 u -> l : gRPC Loms.OrderCancel\n\t- orderID
 activate l
 
-l -> os : order.GetByOrderID()
+l -> os : order.GetByID()
 l -> ss : stocks.ReserveCancel()
 l -> os : order.SetStatus(cancelled)
 deactivate l
