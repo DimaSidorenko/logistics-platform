@@ -7,6 +7,7 @@ database StocksStorage as ss
 
 u -> l : gRPC Loms.OrderPay\n\t- orderID
 activate l
+l -> os : order.GetByID()
 l -> ss : stocks.ReserveRemove()
 l -> os : order.SetStatus(payed)
 
