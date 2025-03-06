@@ -11,8 +11,9 @@ import (
 	config2 "route256/cart/internal/infra/config"
 	"route256/cart/internal/infra/http/middlewares"
 	"route256/cart/internal/infra/http/round_trippers"
-	"route256/cart/internal/services"
+	"route256/cart/internal/services/product"
 	"route256/cart/internal/usecases/cart"
+	"route256/cart/internal/usecases/cart/repository"
 	"time"
 )
 
@@ -23,14 +24,13 @@ func main() {
 		return
 	}
 
-	productClient := services.NewProductClient(
+	productClient := product.NewProductClient(
 		&http.Client{Transport: round_trippers.NewRetryRoundTripper(http.DefaultTransport, 3)},
-		config.ProductService.Host,
-		config.ProductService.Port,
+		fmt.Sprintf("http://%s:%d", config.ProductService.Host, config.ProductService.Port),
 		config.ProductService.Token,
 	)
 
-	cartHandler := cart.NewHandler(productClient)
+	cartHandler := cart.NewHandler(productClient, repository.NewConcurrentMap())
 
 	mux := http.NewServeMux()
 
