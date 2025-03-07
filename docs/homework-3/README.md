@@ -160,7 +160,7 @@ Response
 
 ## Доработки сервиса cart
 
-1) Требуется добавить метод checkout - оформить заказ по всем товарам корзины. Вызывает loms.OrderCreate.
+Требуется добавить метод checkout - оформить заказ по всем товарам корзины. Вызывает loms.OrderCreate.
 Сервис cart имеет HTTP интерфейс. Взаимодействие с LOMS - через gRPC.
 ### POST cart/checkout/<user_id>
 
@@ -181,18 +181,10 @@ Response
 }
 ```
 
-2) Добавляем запрос в метод добавления предметов в корзину `/user/<user_id>/cart/<sku_id>` проверку наличия стоков
-с помощью вызова gRPC метода loms.StocksInfo.
-
-
-![cart-cart-item-add](img/cart-cart-item-add.png)
-
-
-
     
 # Путь покупки товаров:
 
-- cart/item/add - добавляем в корзину и проверяем, что есть в наличии
+- cart/item/add - добавляем в корзину
 - cart/item/delete - можем удалять из корзины
 - cart/list - можем получать список товаров корзины
 - cart/checkout - приобретаем товары через Checkout
