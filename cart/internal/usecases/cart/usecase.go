@@ -58,6 +58,10 @@ func (c *Handler) Checkout(userID cartDto.UserID) (orderID int64, err error) {
 		return 0, err
 	}
 
+	if err = c.DeleteUser(userID); err != nil {
+		return 0, fmt.Errorf("delete user: %v", err)
+	}
+
 	return orderID, nil
 }
 
