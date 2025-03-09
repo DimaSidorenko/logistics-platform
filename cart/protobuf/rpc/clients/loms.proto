@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+option go_package = "route256/cart/pkg/api/client/loms;loms";
+
+service Loms {
+  rpc OrderCreate(OrderCreateRequest) returns (OrderCreateResponse){
+    option (google.api.http) = {
+      post: "/v1/orders"
+      body: "*"
+    };
+  };
+
+  rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse);
+}
+
+message OrderCreateRequest {
+  int64 user = 1;
+  repeated OrderItem items = 2;
+}
+
+message OrderCreateResponse {
+  int64 orderID = 1;
+}
+
+message OrderItem {
+  int64 SKU = 1;
+  uint32 count = 2;
+}
+
+
+message StocksInfoRequest {
+  int64 sku = 1;
+}
+
+message StocksInfoResponse {
+  uint32 count = 1;
+}
