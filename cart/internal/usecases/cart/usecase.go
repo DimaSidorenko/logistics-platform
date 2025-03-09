@@ -1,12 +1,15 @@
 //go:generate minimock -i=storage
 //go:generate minimock -i=productClient
+//go:generate minimock -i=lomsClient
 
 package cart
 
 import (
+	"context"
 	"fmt"
 	"route256/cart/internal/models"
 	cartDto "route256/cart/internal/usecases/cart/dto"
+	"route256/cart/internal/usecases/cart/wrappers"
 )
 
 type storage interface {
@@ -21,21 +24,49 @@ type productClient interface {
 	GetItem(skuID int64) (models.Product, error)
 }
 
+var _ lomsClient = (*wrappers.LomsClientWrapper)(nil)
+
+type lomsClient interface {
+	StocksInfo(ctx context.Context, sku int64) (uint32, error)
+	OrderCreate(context.Context, cartDto.UserID, []cartDto.Item) (orderID int64, err error)
+}
+
 type Handler struct {
 	productClient productClient
+	lomsClient    lomsClient
 	storage       storage
 }
 
-func NewHandler(productClient productClient, storage storage) *Handler {
+func NewHandler(productClient productClient, lomsClient lomsClient, storage storage) *Handler {
 	return &Handler{
 		productClient: productClient,
+		lomsClient:    lomsClient,
 		storage:       storage,
 	}
 }
 
+func (c *Handler) Checkout(userID cartDto.UserID) (orderID int64, err error) {
+	resp, err := c.GetItems(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	orderID, err = c.lomsClient.OrderCreate(context.TODO(), userID, resp.Items)
+	if err != nil {
+		return 0, err
+	}
+
+	return orderID, nil
+}
+
+// AddItem добавляет предметы в корзину.
 func (c *Handler) AddItem(userID cartDto.UserID, skuID cartDto.SkuID, quantity uint32) error {
 	if err := c.validateItem(skuID); err != nil {
 		return fmt.Errorf("validate item: %v", err)
+	}
+
+	if err := c.validateProductExists(skuID, quantity); err != nil {
+		return fmt.Errorf("validate product exists: %v", err)
 	}
 
 	if err := c.storage.AddItem(userID, skuID, quantity); err != nil {
@@ -98,4 +129,17 @@ func (c *Handler) GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, err
 func (c *Handler) validateItem(skuID cartDto.SkuID) error {
 	_, err := c.productClient.GetItem(int64(skuID))
 	return err
+}
+
+func (c *Handler) validateProductExists(skuID cartDto.SkuID, neededCount uint32) error {
+	actualCount, err := c.lomsClient.StocksInfo(context.TODO(), int64(skuID))
+	if err != nil {
+		return fmt.Errorf("stocks info %v", err)
+	}
+
+	if actualCount < neededCount {
+		return fmt.Errorf("not enough stocks")
+	}
+
+	return nil
 }

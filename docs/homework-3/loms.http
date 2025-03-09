@@ -33,7 +33,7 @@ POST http://localhost:8084/order/pay
 Content-Type: application/json
 
 {
-  "orderID": 2
+  "orderID": -1
 }
 ### expected {}
 
@@ -43,7 +43,7 @@ POST http://localhost:8084/order/info
 Content-Type: application/json
 
 {
-  "orderID": 4
+  "orderID": -1
 }
 ### expected {"status":"payed","user":31337,"Items":[{"sku":4487693,"count":3},{"sku":4669069,"count":2}]}
 

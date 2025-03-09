@@ -1,0 +1,6 @@
+.idea
+bin
+vendor-proto
+coverage.out
+go.sum
+go.work.sum

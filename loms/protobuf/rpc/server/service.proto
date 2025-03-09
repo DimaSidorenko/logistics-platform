@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+import "validate/validate.proto";  // Импортируем validate.proto
+
+option go_package = "route256/loms/pkg/api/service/v1;service";
+
+service Loms {
+  rpc OrderCreate(OrderCreateRequest) returns (OrderCreateResponse) {
+    option (google.api.http) = {
+      post: "/order/create"
+      body: "*"
+    };
+  };
+  rpc OrderInfo(OrderInfoRequest) returns (OrderInfoResponse) {
+    option (google.api.http) = {
+      post: "/order/info"
+      body: "*"
+    };
+  };
+  rpc OrderPay(OrderPayRequest) returns (OrderPayResponse) {
+    option (google.api.http) = {
+      post: "/order/pay"
+      body: "*"
+    };
+  };
+  rpc OrderCancel(OrderCancelRequest) returns (OrderCancelResponse) {
+    option (google.api.http) = {
+      post: "/order/cancel"
+      body: "*"
+    };
+  };
+  rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse) {
+    option (google.api.http) = {
+      post: "/stock/info"
+      body: "*"
+    };
+  }
+}
+
+message OrderCreateRequest {
+  int64 user = 1 [(validate.rules).int64.gt = 0];
+  repeated OrderItem items = 2;
+}
+
+message OrderCreateResponse {
+  int64 orderID = 1 [(validate.rules).int64.gt = 0];
+}
+
+message OrderInfoRequest {
+  int64 orderID = 1 [(validate.rules).int64.gt = 0];
+}
+
+message OrderInfoResponse {
+  string status = 1;
+  int64 user = 2 [(validate.rules).int64.gt = 0];
+  repeated OrderItem items = 3;
+}
+
+message OrderPayRequest {
+  int64 orderID = 1 [(validate.rules).int64.gt = 0];
+}
+
+message OrderPayResponse {}
+
+message OrderCancelRequest {
+  int64 orderID = 1 [(validate.rules).int64.gt = 0];
+}
+
+message OrderCancelResponse {}
+
+message StocksInfoRequest {
+  int64 sku = 1 [(validate.rules).int64.gt = 0];
+}
+
+message StocksInfoResponse {
+  uint32 count = 1;
+}
+
+message OrderItem {
+  int64 SKU = 1 [
+    (validate.rules).int64.gt = 0,
+    json_name = "sku"
+  ];
+  uint32 count = 2 [(validate.rules).uint32.gt = 0];
+}

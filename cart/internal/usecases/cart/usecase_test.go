@@ -15,12 +15,16 @@ import (
 func TestHandler_AddItem(t *testing.T) {
 	mc := minimock.NewController(t)
 
+	userID := cartDto.UserID(123)
+	skuID := cartDto.SkuID(456)
+
 	tests := []struct {
 		name           string
 		storageErr     error
 		productErr     error
 		productReturn  models.Product
 		expectedErrMsg string
+		before         func(*ProductClientMock, *LomsClientMock, *StorageMock)
 	}{
 		{
 			name:           "success",
@@ -28,6 +32,11 @@ func TestHandler_AddItem(t *testing.T) {
 			productErr:     nil,
 			productReturn:  models.Product{},
 			expectedErrMsg: "",
+			before: func(p *ProductClientMock, ls *LomsClientMock, s *StorageMock) {
+				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, nil)
+				s.AddItemMock.Expect(userID, skuID, uint32(2)).Return(nil)
+				ls.StocksInfoMock.Expect(minimock.AnyContext, int64(skuID)).Return(10, nil)
+			},
 		},
 		{
 			name:           "validation error",
@@ -35,6 +44,9 @@ func TestHandler_AddItem(t *testing.T) {
 			productErr:     errors.New("unknown item"),
 			productReturn:  models.Product{},
 			expectedErrMsg: "validate item",
+			before: func(p *ProductClientMock, _ *LomsClientMock, _ *StorageMock) {
+				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, errors.New("unknown item"))
+			},
 		},
 		{
 			name:           "add item error",
@@ -42,21 +54,26 @@ func TestHandler_AddItem(t *testing.T) {
 			productErr:     nil,
 			productReturn:  models.Product{},
 			expectedErrMsg: "add item",
+			before: func(p *ProductClientMock, ls *LomsClientMock, s *StorageMock) {
+				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, nil)
+
+				ls.StocksInfoMock.Expect(minimock.AnyContext, int64(skuID)).Return(10, nil)
+
+				s.AddItemMock.Expect(userID, skuID, uint32(2)).Return(errors.New("storage error"))
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			productClientMock := NewProductClientMock(mc)
-			productClientMock.GetItemMock.Expect(int64(456)).Return(tt.productReturn, tt.productErr)
-
+			lomsClientMock := NewLomsClientMock(mc)
 			storageMock := NewStorageMock(mc)
-			if nil == tt.productErr {
-				storageMock.AddItemMock.Expect(123, 456, uint32(2)).Return(tt.storageErr)
-			}
 
-			handler := NewHandler(productClientMock, storageMock)
-			err := handler.AddItem(123, 456, 2)
+			tt.before(productClientMock, lomsClientMock, storageMock)
+
+			handler := NewHandler(productClientMock, lomsClientMock, storageMock)
+			err := handler.AddItem(userID, skuID, 2)
 
 			if tt.expectedErrMsg == "" {
 				assert.NoError(t, err)
@@ -91,7 +108,7 @@ func TestHandler_DeleteItem(t *testing.T) {
 			storageMock := NewStorageMock(mc)
 			storageMock.DeleteItemMock.Expect(123, 456).Return(tt.storageErr)
 
-			handler := NewHandler(nil, storageMock)
+			handler := NewHandler(nil, nil, storageMock)
 			err := handler.DeleteItem(123, 456)
 
 			if nil == tt.storageErr {
@@ -125,7 +142,7 @@ func TestHandler_DeleteUser(t *testing.T) {
 			storageMock := NewStorageMock(mc)
 			storageMock.DeleteUserMock.Expect(123).Return(tt.storageErr)
 
-			handler := NewHandler(nil, storageMock)
+			handler := NewHandler(nil, nil, storageMock)
 			err := handler.DeleteUser(123)
 
 			if nil == tt.storageErr {
@@ -200,7 +217,7 @@ func TestHandler_GetItems(t *testing.T) {
 				productClientMock.GetItemMock.Expect(int64(456)).Return(tt.productReturn, tt.productErr)
 			}
 
-			handler := NewHandler(productClientMock, storageMock)
+			handler := NewHandler(productClientMock, nil, storageMock)
 			result, err := handler.GetItems(123)
 
 			assert.Equal(t, tt.expectedErr, err)
