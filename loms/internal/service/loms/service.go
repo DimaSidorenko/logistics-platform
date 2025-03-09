@@ -56,6 +56,7 @@ func (s *Service) OrderCreate(ctx context.Context, req *desc.OrderCreateRequest)
 	orderID, err := s.usecase.OrderCreate(ctx, req.User, items)
 
 	if err != nil {
+		log.Printf("usecase error : order create : %v, userID = %v", err.Error(), req.User)
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
@@ -69,6 +70,7 @@ func (s *Service) OrderCreate(ctx context.Context, req *desc.OrderCreateRequest)
 func (s *Service) OrderPay(ctx context.Context, req *desc.OrderPayRequest) (*desc.OrderPayResponse, error) {
 	err := s.usecase.OrderPay(ctx, req.OrderID)
 	if err != nil {
+		log.Printf("usecase error : order pay : %v for orderId = %v", err.Error(), req.OrderID)
 		if errors.Is(err, dto.ErrOrderNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}

@@ -68,6 +68,17 @@ func (m *OrderCreateRequest) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if len(m.GetItems()) < 1 {
+		err := OrderCreateRequestValidationError{
+			field:  "Items",
+			reason: "value must contain at least 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	for idx, item := range m.GetItems() {
 		_, _ = idx, item
 

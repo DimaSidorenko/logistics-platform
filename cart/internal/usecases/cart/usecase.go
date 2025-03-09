@@ -7,6 +7,8 @@ package cart
 import (
 	"context"
 	"fmt"
+	"sort"
+
 	"route256/cart/internal/models"
 	cartDto "route256/cart/internal/usecases/cart/dto"
 	"route256/cart/internal/usecases/cart/wrappers"
@@ -119,6 +121,10 @@ func (c *Handler) GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, err
 		})
 		totalPrice += price * repoItem.Count
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Sku < result[j].Sku
+	})
 
 	return cartDto.GetItemsResponse{
 		Items:      result,
