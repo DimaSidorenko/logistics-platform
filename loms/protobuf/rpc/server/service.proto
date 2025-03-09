@@ -14,8 +14,7 @@ service Loms {
   };
   rpc OrderInfo(OrderInfoRequest) returns (OrderInfoResponse) {
     option (google.api.http) = {
-      post: "/order/info"
-      body: "*"
+      get: "/order/info"
     };
   };
   rpc OrderPay(OrderPayRequest) returns (OrderPayResponse) {
@@ -32,15 +31,14 @@ service Loms {
   };
   rpc StocksInfo(StocksInfoRequest) returns (StocksInfoResponse) {
     option (google.api.http) = {
-      post: "/stock/info"
-      body: "*"
+      get: "/stock/info"
     };
   }
 }
 
 message OrderCreateRequest {
   int64 user = 1 [(validate.rules).int64.gt = 0];
-  repeated OrderItem items = 2;
+  repeated OrderItem items = 2 [(validate.rules).repeated.min_items = 1];
 }
 
 message OrderCreateResponse {
@@ -48,7 +46,10 @@ message OrderCreateResponse {
 }
 
 message OrderInfoRequest {
-  int64 orderID = 1 [(validate.rules).int64.gt = 0];
+  int64 orderID = 1 [
+    (validate.rules).int64.gt = 0,
+    json_name = "orderId"
+  ];
 }
 
 message OrderInfoResponse {
@@ -58,13 +59,19 @@ message OrderInfoResponse {
 }
 
 message OrderPayRequest {
-  int64 orderID = 1 [(validate.rules).int64.gt = 0];
+  int64 orderID = 1 [
+    (validate.rules).int64.gt = 0,
+    json_name = "orderId"
+  ];
 }
 
 message OrderPayResponse {}
 
 message OrderCancelRequest {
-  int64 orderID = 1 [(validate.rules).int64.gt = 0];
+  int64 orderID = 1 [
+    (validate.rules).int64.gt = 0,
+    json_name = "orderId"
+  ];
 }
 
 message OrderCancelResponse {}

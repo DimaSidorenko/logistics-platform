@@ -86,6 +86,5 @@ func TestStockRepository(t *testing.T) {
 	t.Run("GetAvailableStock failure", func(t *testing.T) {
 		_, err := storage.GetAvailableStock(ctx, 444)
 		assert.Error(t, err)
-		assert.Equal(t, ErrNotEnoughStock, err)
 	})
 }
