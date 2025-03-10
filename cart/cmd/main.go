@@ -4,17 +4,24 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"route256/cart/internal/app/handlers/add_item"
-	"route256/cart/internal/app/handlers/delete_item"
-	"route256/cart/internal/app/handlers/delete_user"
-	"route256/cart/internal/app/handlers/get_items"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"route256/cart/internal/api/handlers/add_item"
+	"route256/cart/internal/api/handlers/checkout_order"
+	"route256/cart/internal/api/handlers/delete_item"
+	"route256/cart/internal/api/handlers/delete_user"
+	"route256/cart/internal/api/handlers/get_items"
 	config2 "route256/cart/internal/infra/config"
 	"route256/cart/internal/infra/http/middlewares"
 	"route256/cart/internal/infra/http/round_trippers"
 	"route256/cart/internal/services/product"
 	"route256/cart/internal/usecases/cart"
 	"route256/cart/internal/usecases/cart/repository"
-	"time"
+	"route256/cart/internal/usecases/cart/wrappers"
+	desc "route256/cart/pkg/protobuf/rpc/clients"
 )
 
 func main() {
@@ -30,7 +37,16 @@ func main() {
 		config.ProductService.Token,
 	)
 
-	cartHandler := cart.NewHandler(productClient, repository.NewConcurrentMap())
+	conn, err := grpc.NewClient(
+		fmt.Sprintf("%s:%d", config.LomsService.Host, config.LomsService.Port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		panic(err)
+	}
+	lomsClient := desc.NewLomsClient(conn)
+
+	cartHandler := cart.NewHandler(productClient, wrappers.NewLomsClientWrapper(lomsClient), repository.NewConcurrentMap())
 
 	mux := http.NewServeMux()
 
@@ -38,6 +54,7 @@ func main() {
 	mux.Handle("DELETE /user/{user_id}/cart/{sku_id}", delete_item.NewHandler(cartHandler))
 	mux.Handle("DELETE /user/{user_id}/cart", delete_user.NewHandler(cartHandler))
 	mux.Handle("GET /user/{user_id}/cart", get_items.NewHandler(cartHandler))
+	mux.Handle("POST /checkout/{user_id}", checkout_order.NewHandler(cartHandler))
 
 	server := &http.Server{
 		Addr:        ":8080",
