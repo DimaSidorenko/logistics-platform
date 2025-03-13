@@ -14,19 +14,8 @@ loop for each item in request
     p -> c : \nResponse:\n\t- name\n\t- price
   deactivate p
   c -> c : validate product exists
-
-  c -> o : gRPC Loms.StocksInfo\n\t- sku
-  activate o
-    o -> c : Response:\n\t- count
-  deactivate o
-  c -> c : validate stocks
-  alt stocks enough
-    c -> cs : cart.AddItem()
-    c -> u : 200 OK
-  else
-    c -> u : 412 Failed Precondition (insufficient stocks)
-  end
 end
+c -> u : 200 OK
 deactivate c
 
 @enduml
