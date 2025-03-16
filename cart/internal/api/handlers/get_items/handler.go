@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	cartDto "route256/cart/internal/usecases/cart/dto"
 	"strconv"
+
+	cartDto "route256/cart/internal/usecases/cart/dto"
 )
 
 type cartClient interface {
@@ -34,7 +35,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	items, err := h.cartClient.GetItems(cartDto.UserID(userID))
 	if err != nil {
 		if errors.Is(err, cartDto.ErrUserNotFound) {
-			w.WriteHeader(http.StatusNotFound)
+			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
 

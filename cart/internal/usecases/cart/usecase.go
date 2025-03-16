@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"sort"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"route256/cart/internal/models"
 	cartDto "route256/cart/internal/usecases/cart/dto"
 	"route256/cart/internal/usecases/cart/wrappers"
@@ -55,6 +58,13 @@ func (c *Handler) Checkout(userID cartDto.UserID) (orderID int64, err error) {
 
 	orderID, err = c.lomsClient.OrderCreate(context.TODO(), userID, resp.Items)
 	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			if st.Code() == codes.FailedPrecondition {
+				return 0, cartDto.ErrFailedToReserveStocks
+			}
+		}
+
 		return 0, err
 	}
 
@@ -71,9 +81,10 @@ func (c *Handler) AddItem(userID cartDto.UserID, skuID cartDto.SkuID, quantity u
 		return fmt.Errorf("validate item: %v", err)
 	}
 
-	if err := c.validateProductExists(skuID, quantity); err != nil {
-		return fmt.Errorf("validate product exists: %v", err)
-	}
+	// (dosidorenko): по ходу курса менторы отказались от этого метода.
+	//if err := c.validateProductExists(skuID, quantity); err != nil {
+	//	return fmt.Errorf("validate product exists: %v", err)
+	//}
 
 	if err := c.storage.AddItem(userID, skuID, quantity); err != nil {
 		return fmt.Errorf("add item: %v", err)
@@ -141,15 +152,16 @@ func (c *Handler) validateItem(skuID cartDto.SkuID) error {
 	return err
 }
 
-func (c *Handler) validateProductExists(skuID cartDto.SkuID, neededCount uint32) error {
-	actualCount, err := c.lomsClient.StocksInfo(context.TODO(), int64(skuID))
-	if err != nil {
-		return fmt.Errorf("stocks info %v", err)
-	}
-
-	if actualCount < neededCount {
-		return fmt.Errorf("not enough stocks")
-	}
-
-	return nil
-}
+// (dosidorenko): В конце курса можно будет удалить.
+//func (c *Handler) validateProductExists(skuID cartDto.SkuID, neededCount uint32) error {
+//	actualCount, err := c.lomsClient.StocksInfo(context.TODO(), int64(skuID))
+//	if err != nil {
+//		return fmt.Errorf("stocks info %v", err)
+//	}
+//
+//	if actualCount < neededCount {
+//		return fmt.Errorf("not enough stocks")
+//	}
+//
+//	return nil
+//}

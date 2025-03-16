@@ -90,8 +90,10 @@ vendor-proto/protoc-gen-openapiv2/options:
 bindir:
 	mkdir -p ${BINDIR}
 
+build-local: .protoc-generate bindir
+	CONFIG_FILE=./configs/values_local.yaml go run cmd/main.go
+
 build: .protoc-generate bindir
-	#CONFIG_FILE=./configs/values_local.yaml go run cmd/main.go
 	go run cmd/main.go
 
 lint:
@@ -100,6 +102,10 @@ lint:
 coverage:
 	go test ./... -coverprofile=coverage.out
 	go tool cover -func=coverage.out
+
+run-all-local: lint coverage build-local
+	$(info local run)
+	echo "Запуск всех задач завершен."
 
 run-all: lint coverage build
 	echo "Запуск всех задач завершен."

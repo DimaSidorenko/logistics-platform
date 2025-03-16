@@ -11,9 +11,10 @@ const (
 )
 
 type Order struct {
-	Status OrderStatus
-	User   int64
-	Items  []Item
+	OrderID int64 `json:"order_id"`
+	Status  OrderStatus
+	User    int64
+	Items   []Item
 }
 
 type Item struct {

@@ -1,8 +1,0 @@
-version: '3.8'
-
-services:
-  web:
-    image: gitlab-registry.ozon.dev/go/classroom-16/students/base/products:latest
-    ports:
-      - "8082:8082"
-
