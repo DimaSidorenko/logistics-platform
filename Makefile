@@ -4,3 +4,6 @@ include make/build.mk
 lint: cart-lint loms-lint notifier-lint comments-lint
 
 build: cart-build loms-build notifier-build comments-build
+
+run-migrations:
+	$(info run-migrations for all project)

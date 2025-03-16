@@ -22,6 +22,26 @@ type Config struct {
 		Host string `yaml:"host"`
 		Port int    `yaml:"port"`
 	} `yaml:"jaeger"`
+	DbMaster struct {
+		Host     string `yaml:"host"`
+		Port     int    `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+		DbName   string `yaml:"db_name"`
+	} `yaml:"db_master"`
+	DbReplica struct {
+		Host     string `yaml:"host"`
+		Port     int    `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+		DbName   string `yaml:"db_name"`
+	} `yaml:"db_replica"`
+	Kafka struct {
+		Host       string `yaml:"host"`
+		Port       int    `yaml:"port"`
+		OrderTopic string `yaml:"order_topic"`
+		Brokers    string `yaml:"brokers"`
+	} `yaml:"kafka"`
 }
 
 func ReadConfig() (Config, error) {

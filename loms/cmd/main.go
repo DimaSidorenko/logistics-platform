@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -19,6 +20,7 @@ import (
 	"route256/loms/internal/middlewares"
 	lomsService "route256/loms/internal/service/loms"
 	lomsUsecase "route256/loms/internal/usecases/loms"
+	"route256/loms/internal/usecases/loms/stocks_repository"
 	lomsUsecaseStorage "route256/loms/internal/usecases/loms/storage"
 	desc "route256/loms/pkg/protobuf/rpc/server"
 )
@@ -64,8 +66,29 @@ func main() {
 		panic(err)
 	}
 
+	dbDsnMaster := fmt.Sprintf(
+		"%s://%s:%s@%s:%d/%s?sslmode=%s",
+		"postgresql",          // протокол
+		cfg.DbMaster.User,     // имя пользователя
+		cfg.DbMaster.Password, // пароль
+		cfg.DbMaster.Host,     // хост
+		cfg.DbMaster.Port,     // порт
+		cfg.DbMaster.DbName,   // имя базы данных
+		"disable",             // параметр sslmode
+	)
+
+	masterConfig, err := pgxpool.ParseConfig(dbDsnMaster)
+	if err != nil {
+		log.Fatalf("unable to parse config: %v\n", err)
+	}
+
+	masterPool, err := pgxpool.NewWithConfig(ctx, masterConfig)
+	if err != nil {
+		log.Fatalf("unable to create pgx pool: %v\n", err)
+	}
+
 	usecase := lomsUsecase.NewUsecase(
-		lomsUsecaseStorage.NewOrderStorage(),
+		stocks_repository.NewRepositoryDB(masterPool),
 		lomsUsecaseStorage.NewStocksStorage(stocks),
 	)
 	service := lomsService.NewService(usecase)

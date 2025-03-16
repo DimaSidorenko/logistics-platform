@@ -2,10 +2,12 @@ package checkout_order
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
-	cartDto "route256/cart/internal/usecases/cart/dto"
 	"strconv"
+
+	cartDto "route256/cart/internal/usecases/cart/dto"
 )
 
 type cartClient interface {
@@ -31,7 +33,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	orderID, err := h.cartClient.Checkout(cartDto.UserID(userID))
 	if err != nil {
-		log.Printf("checkout failed: %v", err)
+		log.Printf("checkout order failed: %v", err)
+
+		if errors.Is(err, cartDto.ErrUserNotFound) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if errors.Is(err, cartDto.ErrFailedToReserveStocks) {
+			http.Error(w, "failed to reserve stocks", http.StatusPreconditionFailed)
+			return
+		}
+
 		http.Error(w, "checkout failed", http.StatusInternalServerError)
 		return
 	}

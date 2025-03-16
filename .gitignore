@@ -1,4 +1,6 @@
 .idea
 bin
 vendor-proto
+master_data
+replica_data
 

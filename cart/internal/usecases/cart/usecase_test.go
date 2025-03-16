@@ -24,7 +24,7 @@ func TestHandler_AddItem(t *testing.T) {
 		productErr     error
 		productReturn  models.Product
 		expectedErrMsg string
-		before         func(*ProductClientMock, *LomsClientMock, *StorageMock)
+		before         func(*ProductClientMock, *StorageMock)
 	}{
 		{
 			name:           "success",
@@ -32,10 +32,9 @@ func TestHandler_AddItem(t *testing.T) {
 			productErr:     nil,
 			productReturn:  models.Product{},
 			expectedErrMsg: "",
-			before: func(p *ProductClientMock, ls *LomsClientMock, s *StorageMock) {
+			before: func(p *ProductClientMock, s *StorageMock) {
 				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, nil)
 				s.AddItemMock.Expect(userID, skuID, uint32(2)).Return(nil)
-				ls.StocksInfoMock.Expect(minimock.AnyContext, int64(skuID)).Return(10, nil)
 			},
 		},
 		{
@@ -44,7 +43,7 @@ func TestHandler_AddItem(t *testing.T) {
 			productErr:     errors.New("unknown item"),
 			productReturn:  models.Product{},
 			expectedErrMsg: "validate item",
-			before: func(p *ProductClientMock, _ *LomsClientMock, _ *StorageMock) {
+			before: func(p *ProductClientMock, _ *StorageMock) {
 				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, errors.New("unknown item"))
 			},
 		},
@@ -54,11 +53,8 @@ func TestHandler_AddItem(t *testing.T) {
 			productErr:     nil,
 			productReturn:  models.Product{},
 			expectedErrMsg: "add item",
-			before: func(p *ProductClientMock, ls *LomsClientMock, s *StorageMock) {
+			before: func(p *ProductClientMock, s *StorageMock) {
 				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, nil)
-
-				ls.StocksInfoMock.Expect(minimock.AnyContext, int64(skuID)).Return(10, nil)
-
 				s.AddItemMock.Expect(userID, skuID, uint32(2)).Return(errors.New("storage error"))
 			},
 		},
@@ -67,12 +63,11 @@ func TestHandler_AddItem(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			productClientMock := NewProductClientMock(mc)
-			lomsClientMock := NewLomsClientMock(mc)
 			storageMock := NewStorageMock(mc)
 
-			tt.before(productClientMock, lomsClientMock, storageMock)
+			tt.before(productClientMock, storageMock)
 
-			handler := NewHandler(productClientMock, lomsClientMock, storageMock)
+			handler := NewHandler(productClientMock, NewLomsClientMock(mc), storageMock)
 			err := handler.AddItem(userID, skuID, 2)
 
 			if tt.expectedErrMsg == "" {

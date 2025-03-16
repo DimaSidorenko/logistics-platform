@@ -5,6 +5,9 @@ PACKAGE=route256/loms
 LOCAL_BIN:=$(CURDIR)/bin
 NOTES_PROTO_PATH:="protobuf/rpc/server"
 
+bindir:
+	mkdir -p ${BINDIR}
+
 # Устанавливаем proto описания google/protobuf
 vendor-proto/google/protobuf:
 	git clone -b main --single-branch -n --depth=1 --filter=tree:0 \
@@ -59,15 +62,16 @@ vendor-proto/protoc-gen-openapiv2/options:
 
 
 .PHONY: .bin-deps
-.bin-deps:
+.bin-deps: bindir
 	$(info Installing binary dependencies...)
-
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1 && \
 	GOBIN=$(LOCAL_BIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0 && \
 	GOBIN=$(LOCAL_BIN) go install github.com/envoyproxy/protoc-gen-validate@v1.0.4 && \
 	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.19.1 && \
 	GOBIN=$(LOCAL_BIN) go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.19.1 && \
-	GOBIN=$(LOCAL_BIN) go install github.com/go-swagger/go-swagger/cmd/swagger@v0.30.5
+	GOBIN=$(LOCAL_BIN) go install github.com/go-swagger/go-swagger/cmd/swagger@v0.30.5 && \
+	GOBIN=$(LOCAL_BIN) go install github.com/pressly/goose/v3/cmd/goose@v3.24.1 && \
+	GOBIN=$(LOCAL_BIN) go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.28.0
 
 
 .PHONY: .protoc-generate
@@ -90,9 +94,25 @@ vendor-proto/protoc-gen-openapiv2/options:
 	go mod tidy
 
 
+MIGRATION_NAME ?= add_registry
+
+create-migration-file:
+	$(LOCAL_BIN)/goose -dir migrations create -s $(MIGRATION_NAME) sql
+
+up-migrations:
+	$(LOCAL_BIN)/goose -dir migrations postgres "postgresql://user:password@127.0.0.1:5432/route256?sslmode=disable" up
+
+revert-migration:
+	$(LOCAL_BIN)/goose -dir migrations postgres "postgresql://user:password@127.0.0.1:5432/route256?sslmode=disable" down
+
+compile-sql:
+	$(LOCAL_BIN)/sqlc generate
+
 build: .protoc-generate
+	go run cmd/main.go
+
+build-local: .protoc-generate
 	CONFIG_FILE=./configs/values_local.yaml go run cmd/main.go
-	#go run cmd/main.go
 
 lint:
 	golangci-lint run ./...
@@ -104,6 +124,15 @@ coverage:
 run-all: lint coverage build
 	echo "Запуск всех задач завершен."
 
-run-migrations:
-	echo "run migrations"
+run-all-local: lint coverage build-local
+	echo "Запуск всех задач завершен."
 
+# Цель для запуска миграций
+run-migrations-local: .bin-deps
+	$(info Running migrations for loms...)
+	$(LOCAL_BIN)/goose -dir migrations postgres "postgresql://loms-user:loms-password@localhost:5432/loms_db?sslmode=disable" up
+
+# Цель для запуска миграций
+run-migrations:
+	$(info Running migrations for loms...)
+	goose -dir ${MIGRATION_DIR} postgres "postgresql://loms-user:loms-password@postgres-master:5432/loms_db?sslmode=disable" up

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  product-service:
+    image: gitlab-registry.ozon.dev/go/classroom-16/students/base/products:latest
+    ports:
+      - "8082:8082"
+  postgres-master:
+    image: gitlab-registry.ozon.dev/go/classroom-16/students/base/postgres:16
+    container_name: postgres-master
+    environment:
+      - POSTGRESQL_USERNAME=loms-user
+      - POSTGRESQL_PASSWORD=loms-password
+      - POSTGRESQL_DATABASE=loms_db
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_SYNCHRONOUS_COMMIT_MODE=on
+      - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=1
+    ports:
+      - '5432:5432'
+
+  postgres-replica:
+    image: gitlab-registry.ozon.dev/go/classroom-16/students/base/postgres:16
+    container_name: postgres-replica
+    depends_on:
+      - postgres-master
+    environment:
+      - POSTGRESQL_USERNAME=loms-user
+      - POSTGRESQL_PASSWORD=loms-password
+      - POSTGRESQL_DATABASE=loms_db
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_MASTER_HOST=postgres-master
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_SYNCHRONOUS_COMMIT_MODE=on
+      - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=1
+    ports:
+      - '5433:5432'
