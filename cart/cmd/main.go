@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -25,6 +30,9 @@ import (
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	config, err := config2.ReadConfig()
 	if err != nil {
 		log.Fatalf("read config: %v", err)
@@ -35,6 +43,8 @@ func main() {
 		&http.Client{Transport: round_trippers.NewRetryRoundTripper(http.DefaultTransport, 3)},
 		fmt.Sprintf("http://%s:%d", config.ProductService.Host, config.ProductService.Port),
 		config.ProductService.Token,
+		rate.NewLimiter(10, 10),
+		//ratelimiter.New(10),
 	)
 
 	conn, err := grpc.NewClient(
@@ -63,8 +73,26 @@ func main() {
 		IdleTimeout: 120 * time.Second,
 	}
 
-	fmt.Println("Starting server on :8080")
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Error starting server: %v\n", err)
+	go func() {
+		fmt.Println("Starting server on :8080")
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Error starting server: %v\n", err)
+		}
+	}()
+
+	// Ожидаем отмены контекста (получения сигнала)
+	<-ctx.Done()
+
+	// Создаём контекст с таймаутом для graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Пытаемся корректно завершить работу сервера
+	if err := server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("Graceful shutdown failed: %v", err)
 	}
+
+	//<-time.NewTimer(time.Second * 1).C
+
+	log.Println("Server successfully shutdown")
 }

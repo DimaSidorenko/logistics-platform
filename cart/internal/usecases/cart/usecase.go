@@ -8,7 +8,9 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -26,7 +28,7 @@ type storage interface {
 }
 
 type productClient interface {
-	GetItem(skuID int64) (models.Product, error)
+	GetItem(ctx context.Context, skuID int64) (models.Product, error)
 }
 
 var _ lomsClient = (*wrappers.LomsClientWrapper)(nil)
@@ -121,20 +123,42 @@ func (c *Handler) GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, err
 
 	result := make([]cartDto.Item, 0, len(items))
 	var totalPrice uint32
-	for _, repoItem := range items {
-		item, err := c.productClient.GetItem(int64(repoItem.Sku))
-		if err != nil {
-			return cartDto.GetItemsResponse{}, fmt.Errorf("get item in product service: %v", err)
-		}
+	var mutex sync.Mutex
 
-		price := uint32(item.Price)
-		result = append(result, cartDto.Item{
-			Sku:   repoItem.Sku,
-			Count: repoItem.Count,
-			Name:  item.Name,
-			Price: price,
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for _, repoItem := range items {
+		eg.Go(func() error {
+			item, err := c.productClient.GetItem(ctx, int64(repoItem.Sku))
+			if err != nil {
+				cancel()
+				return fmt.Errorf("get item in product service: %v", err)
+			}
+
+			price := uint32(item.Price)
+
+			func() {
+				mutex.Lock()
+				defer mutex.Unlock()
+
+				result = append(result, cartDto.Item{
+					Sku:   repoItem.Sku,
+					Count: repoItem.Count,
+					Name:  item.Name,
+					Price: price,
+				})
+				totalPrice += price * repoItem.Count
+			}()
+
+			return nil
 		})
-		totalPrice += price * repoItem.Count
+	}
+
+	if err := eg.Wait(); err != nil {
+		return cartDto.GetItemsResponse{}, fmt.Errorf("get items: %v", err)
 	}
 
 	sort.Slice(result, func(i, j int) bool {
@@ -148,7 +172,7 @@ func (c *Handler) GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, err
 }
 
 func (c *Handler) validateItem(skuID cartDto.SkuID) error {
-	_, err := c.productClient.GetItem(int64(skuID))
+	_, err := c.productClient.GetItem(context.TODO(), int64(skuID))
 	return err
 }
 
