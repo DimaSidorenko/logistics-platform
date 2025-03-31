@@ -109,10 +109,7 @@ compile-sql:
 	$(LOCAL_BIN)/sqlc generate
 
 build: .protoc-generate
-	go run cmd/main.go
-
-build-local: .protoc-generate
-	CONFIG_FILE=./configs/values_local.yaml go run cmd/main.go
+	go run cmd/service/main.go
 
 lint:
 	golangci-lint run ./...
@@ -122,9 +119,6 @@ coverage:
 	go tool cover -func=coverage.out
 
 run-all: lint coverage build
-	echo "Запуск всех задач завершен."
-
-run-all-local: lint coverage build-local
 	echo "Запуск всех задач завершен."
 
 # Цель для запуска миграций

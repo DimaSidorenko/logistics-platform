@@ -3,4 +3,4 @@ kafka:
   port: 29092
   order_topic: loms.order-events
   consumer_group_id: notifier-group
-  brokers: localhost:29092
+  brokers: localhost:9092
