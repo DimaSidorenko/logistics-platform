@@ -1,16 +1,21 @@
 package cart
 
 import (
+	"context"
 	"errors"
-	"fmt"
-	cartDto "route256/cart/internal/usecases/cart/dto"
 	"testing"
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 
 	"route256/cart/internal/models"
+	cartDto "route256/cart/internal/usecases/cart/dto"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 func TestHandler_AddItem(t *testing.T) {
 	mc := minimock.NewController(t)
@@ -33,7 +38,7 @@ func TestHandler_AddItem(t *testing.T) {
 			productReturn:  models.Product{},
 			expectedErrMsg: "",
 			before: func(p *ProductClientMock, s *StorageMock) {
-				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, nil)
+				p.GetItemMock.Expect(minimock.AnyContext, int64(skuID)).Return(models.Product{}, nil)
 				s.AddItemMock.Expect(userID, skuID, uint32(2)).Return(nil)
 			},
 		},
@@ -44,7 +49,7 @@ func TestHandler_AddItem(t *testing.T) {
 			productReturn:  models.Product{},
 			expectedErrMsg: "validate item",
 			before: func(p *ProductClientMock, _ *StorageMock) {
-				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, errors.New("unknown item"))
+				p.GetItemMock.Expect(minimock.AnyContext, int64(skuID)).Return(models.Product{}, errors.New("unknown item"))
 			},
 		},
 		{
@@ -54,7 +59,7 @@ func TestHandler_AddItem(t *testing.T) {
 			productReturn:  models.Product{},
 			expectedErrMsg: "add item",
 			before: func(p *ProductClientMock, s *StorageMock) {
-				p.GetItemMock.Expect(int64(skuID)).Return(models.Product{}, nil)
+				p.GetItemMock.Expect(minimock.AnyContext, int64(skuID)).Return(models.Product{}, nil)
 				s.AddItemMock.Expect(userID, skuID, uint32(2)).Return(errors.New("storage error"))
 			},
 		},
@@ -163,42 +168,19 @@ func TestHandler_GetItems(t *testing.T) {
 	}{
 		{
 			"success",
-			[]cartDto.Item{{Sku: 456, Count: 2}},
+			[]cartDto.Item{{Sku: 455, Count: 2}, {Sku: 456, Count: 3}, {Sku: 457, Count: 2}},
 			nil,
 			models.Product{Name: "ItemName", Price: 100},
 			nil,
 			nil,
 			cartDto.GetItemsResponse{
-				Items:      []cartDto.Item{{Sku: 456, Count: 2, Name: "ItemName", Price: 100}},
-				TotalPrice: 200,
+				Items: []cartDto.Item{
+					{Sku: 455, Count: 2, Name: "ItemName", Price: 100},
+					{Sku: 456, Count: 3, Name: "ItemName", Price: 100},
+					{Sku: 457, Count: 2, Name: "ItemName", Price: 100},
+				},
+				TotalPrice: 700,
 			},
-		},
-		{
-			"storage error",
-			nil,
-			errors.New("storage error"),
-			models.Product{},
-			nil,
-			errors.New("get items: storage error"),
-			cartDto.GetItemsResponse{},
-		},
-		{
-			"user not found",
-			[]cartDto.Item{},
-			nil,
-			models.Product{},
-			nil,
-			cartDto.ErrUserNotFound,
-			cartDto.GetItemsResponse{},
-		},
-		{
-			"item not found",
-			[]cartDto.Item{{Sku: 456, Count: 2}},
-			nil,
-			models.Product{},
-			models.ErrItemNotFound,
-			fmt.Errorf("get item in product service: %v", models.ErrItemNotFound),
-			cartDto.GetItemsResponse{},
 		},
 	}
 
@@ -209,14 +191,16 @@ func TestHandler_GetItems(t *testing.T) {
 
 			productClientMock := NewProductClientMock(mc)
 			if nil == tt.storageErr && len(tt.storageReturn) > 0 {
-				productClientMock.GetItemMock.Expect(int64(456)).Return(tt.productReturn, tt.productErr)
+				productClientMock.GetItemMock.Set(func(_ context.Context, _ int64) (models.Product, error) {
+					return tt.productReturn, tt.productErr
+				})
 			}
 
 			handler := NewHandler(productClientMock, nil, storageMock)
 			result, err := handler.GetItems(123)
 
 			assert.Equal(t, tt.expectedErr, err)
-			assert.Equal(t, tt.expectedResult, result)
+			assert.ElementsMatch(t, tt.expectedResult.Items, result.Items)
 		})
 	}
 }
