@@ -9,7 +9,9 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
@@ -17,6 +19,8 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"route256/loms/internal/infra/config"
+	"route256/loms/internal/infra/kafka"
+	"route256/loms/internal/infra/kafka/producer"
 	"route256/loms/internal/middlewares"
 	lomsService "route256/loms/internal/service/loms"
 	lomsUsecase "route256/loms/internal/usecases/loms"
@@ -87,9 +91,28 @@ func main() {
 		log.Fatalf("unable to create pgx pool: %v\n", err)
 	}
 
+	// Init loms.order-events kafka producer.
+	orderEventsProducer, err := producer.NewSyncProducer(
+		kafka.Config{Brokers: []string{cfg.Kafka.Brokers}},
+		producer.WithIdempotent(),
+		producer.WithRequiredAcks(sarama.WaitForAll),
+		producer.WithMaxOpenRequests(1),
+		producer.WithMaxRetries(5),
+		producer.WithRetryBackoff(10*time.Millisecond),
+		//producer.WithProducerPartitioner(sarama.NewManualPartitioner),
+		//producer.WithProducerPartitioner(sarama.NewRoundRobinPartitioner),
+		//producer.WithProducerPartitioner(sarama.NewRandomPartitioner),
+		producer.WithProducerPartitioner(sarama.NewHashPartitioner),
+	)
+	if err != nil {
+		log.Fatalf("unable to create loms order events producer: %v\n", err)
+	}
+
 	usecase := lomsUsecase.NewUsecase(
 		stocks_repository.NewRepositoryDB(masterPool),
 		lomsUsecaseStorage.NewStocksStorage(stocks),
+		orderEventsProducer,
+		cfg.Kafka.OrderTopic,
 	)
 	service := lomsService.NewService(usecase)
 
