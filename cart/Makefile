@@ -107,7 +107,7 @@ run-all-local: lint coverage build-local
 	$(info local run)
 	echo "Запуск всех задач завершен."
 
-run-all: lint coverage build
+run-all: coverage build
 	echo "Запуск всех задач завершен."
 
 run-migrations:

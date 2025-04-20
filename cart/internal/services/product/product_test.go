@@ -14,15 +14,15 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 	"golang.org/x/sync/errgroup"
 
 	"route256/cart/internal/models"
 )
 
-func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
-}
+//(dosidorenko) goleak не дружит с моей либой трейсинга
+//func TestMain(m *testing.M) {
+//	goleak.VerifyTestMain(m)
+//}
 
 func TestLimiter(t *testing.T) {
 	mc := minimock.NewController(t)

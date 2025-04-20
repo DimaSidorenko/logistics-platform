@@ -24,14 +24,14 @@ GET http://localhost:8080/user/31337/cart
 ### checkout cart
 POST http://localhost:8080/checkout/31337
 Content-Type: application/json
-#Authorization: testtoken
-#X-Product-Service-Token: testtoken
+Authorization: testtoken
+X-Product-Service-Token: testtoken
 
 ### expected {"orderID":1000}
 
 
 ### check orderID in LOMS
-GET http://localhost:8084/order/info?orderId=1000
+GET http://localhost:8084/order/info?orderId=9
 Content-Type: application/json
 ### expected {"status":"awaiting payment","user":31337,"Items":[{"sku":4465995,"count":1}]}
 

@@ -14,6 +14,13 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -21,6 +28,7 @@ import (
 	"route256/loms/internal/infra/config"
 	"route256/loms/internal/infra/kafka"
 	"route256/loms/internal/infra/kafka/producer"
+	"route256/loms/internal/logger"
 	"route256/loms/internal/middlewares"
 	lomsService "route256/loms/internal/service/loms"
 	lomsUsecase "route256/loms/internal/usecases/loms"
@@ -64,6 +72,33 @@ func main() {
 		log.Fatalf("read config: %v", err)
 		return
 	}
+
+	jaegerResource, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("loms"),
+		),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	exp, err := otlptracehttp.New(ctx, otlptracehttp.WithEndpointURL("http://localhost:4318"))
+	if err != nil {
+		panic(err)
+	}
+
+	traceProvider := trace.NewTracerProvider(
+		trace.WithBatcher(exp),
+		trace.WithResource(jaegerResource),
+	)
+
+	defer func() {
+		_ = traceProvider.Shutdown(ctx)
+	}()
+
+	otel.SetTracerProvider(traceProvider)
 
 	list, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Service.GrpcPort))
 	if err != nil {
@@ -117,16 +152,19 @@ func main() {
 	service := lomsService.NewService(usecase)
 
 	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()), // конструкция для трейсинга
 		grpc.ChainUnaryInterceptor(
 			middlewares.Logger,
 			middlewares.Validate,
+			middlewares.Metrics,
+			//middlewares.Tracing,
 		),
 	)
 	reflection.Register(grpcServer)
 	desc.RegisterLomsServer(grpcServer, service)
 
 	go func() {
-		log.Printf("Serving grpcServer on %s\n", list.Addr().String())
+		logger.Warnw(ctx, "Serving grpcServer on %s\n", list.Addr().String())
 		if err = grpcServer.Serve(list); err != nil {
 			panic(err)
 		}
@@ -140,6 +178,7 @@ func main() {
 		panic(err)
 	}
 
+	// Init router for http server.
 	gwmux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(
 			func(header string) (string, bool) {
@@ -147,7 +186,7 @@ func main() {
 				case "x-auth":
 					return header, true
 				default:
-					return header, false
+					return header, true
 				}
 			},
 		),
@@ -156,13 +195,20 @@ func main() {
 		panic(err)
 	}
 
+	metricsHandler := promhttp.Handler()
+	if err = gwmux.HandlePath("GET", "/metrics", func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
+		metricsHandler.ServeHTTP(w, r)
+	}); err != nil {
+		log.Fatalf("Error serving /metrics: %v\n", err)
+	}
+
 	//nolint:gosec
 	gwServer := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Service.HttpPort),
 		Handler: gwmux,
 	}
 
-	log.Printf("Serving gRPC-Gateway on %s\n", gwServer.Addr)
+	logger.Warnw(ctx, "Serving gRPC-Gateway on %s\n", gwServer.Addr)
 	if err = gwServer.ListenAndServe(); err != nil {
 		panic(err)
 	}

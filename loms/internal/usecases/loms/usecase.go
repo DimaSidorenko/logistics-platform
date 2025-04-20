@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"route256/loms/internal/tracing"
 	"strconv"
 	"time"
 
@@ -61,6 +62,10 @@ func (u *Usecase) produceOrderEvent(orderID string, message string) {
 }
 
 func (u *Usecase) OrderCreate(ctx context.Context, userID int64, items []dto.Item) (int64, error) {
+	log.Println(ctx)
+	ctx, span := tracing.StartFromContext(ctx, "Usecase OrderCreate")
+	defer span.End()
+
 	orderID, err := u.orderRepo.CreateOrder(ctx, userID, items)
 	if err != nil {
 		return 0, err
@@ -87,6 +92,9 @@ func (u *Usecase) OrderCreate(ctx context.Context, userID int64, items []dto.Ite
 }
 
 func (u *Usecase) OrderInfo(ctx context.Context, orderID int64) (*dto.Order, error) {
+	ctx, span := tracing.StartFromContext(ctx, "Service OrderInfo")
+	defer span.End()
+
 	order, err := u.orderRepo.GetOrderByID(ctx, orderID)
 	if err != nil {
 		return nil, dto.ErrOrderNotFound

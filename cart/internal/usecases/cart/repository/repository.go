@@ -1,8 +1,11 @@
 package repository
 
 import (
-	cartDto "route256/cart/internal/usecases/cart/dto"
+	"context"
+	"route256/cart/internal/tracing"
 	"sync"
+
+	cartDto "route256/cart/internal/usecases/cart/dto"
 )
 
 type ConcurrentMap struct {
@@ -28,7 +31,10 @@ func (c *ConcurrentMap) GetItem(userID cartDto.UserID, skuID cartDto.SkuID) (uin
 	return quantity, found
 }
 
-func (c *ConcurrentMap) GetItems(userID cartDto.UserID) ([]cartDto.Item, error) {
+func (c *ConcurrentMap) GetItems(ctx context.Context, userID cartDto.UserID) ([]cartDto.Item, error) {
+	_, span := tracing.StartFromContext(ctx, "concurrentMap.GetItems")
+	defer span.End()
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 

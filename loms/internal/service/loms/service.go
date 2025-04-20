@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"route256/loms/internal/tracing"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,6 +26,8 @@ type lomsUsecase interface {
 	StocksInfo(ctx context.Context, sku int64) (uint32, error)
 }
 
+var _ desc.LomsServer = (*Service)(nil)
+
 type Service struct {
 	desc.UnimplementedLomsServer
 	usecase lomsUsecase
@@ -37,6 +40,9 @@ func NewService(usecase lomsUsecase) *Service {
 }
 
 func (s *Service) OrderInfo(ctx context.Context, req *desc.OrderInfoRequest) (*desc.OrderInfoResponse, error) {
+	ctx, span := tracing.StartFromContext(ctx, "Service OrderInfo")
+	defer span.End()
+
 	order, err := s.usecase.OrderInfo(ctx, req.OrderID)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
@@ -52,6 +58,9 @@ func (s *Service) OrderInfo(ctx context.Context, req *desc.OrderInfoRequest) (*d
 }
 
 func (s *Service) OrderCreate(ctx context.Context, req *desc.OrderCreateRequest) (*desc.OrderCreateResponse, error) {
+	ctx, span := tracing.StartFromContext(ctx, "Service OrderCreate")
+	defer span.End()
+
 	items := convertToDtoItems(req.Items)
 	orderID, err := s.usecase.OrderCreate(ctx, req.User, items)
 
@@ -68,6 +77,9 @@ func (s *Service) OrderCreate(ctx context.Context, req *desc.OrderCreateRequest)
 }
 
 func (s *Service) OrderPay(ctx context.Context, req *desc.OrderPayRequest) (*desc.OrderPayResponse, error) {
+	ctx, span := tracing.StartFromContext(ctx, "Service OrderPay")
+	defer span.End()
+
 	err := s.usecase.OrderPay(ctx, req.OrderID)
 	if err != nil {
 		log.Printf("usecase error : order pay : %v for orderId = %v", err.Error(), req.OrderID)
@@ -88,6 +100,9 @@ func (s *Service) OrderPay(ctx context.Context, req *desc.OrderPayRequest) (*des
 }
 
 func (s *Service) OrderCancel(ctx context.Context, req *desc.OrderCancelRequest) (*desc.OrderCancelResponse, error) {
+	ctx, span := tracing.StartFromContext(ctx, "Service OrderCancel")
+	defer span.End()
+
 	err := s.usecase.OrderCancel(ctx, req.OrderID)
 
 	if err != nil {
@@ -106,6 +121,9 @@ func (s *Service) OrderCancel(ctx context.Context, req *desc.OrderCancelRequest)
 }
 
 func (s *Service) StocksInfo(ctx context.Context, req *desc.StocksInfoRequest) (*desc.StocksInfoResponse, error) {
+	ctx, span := tracing.StartFromContext(ctx, "Service StocksInfo")
+	defer span.End()
+
 	count, err := s.usecase.StocksInfo(ctx, req.GetSku())
 	if err != nil {
 		log.Printf("usecase : stocksInfo : %v", err)

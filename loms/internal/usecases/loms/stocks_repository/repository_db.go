@@ -3,6 +3,7 @@ package stocks_repository
 import (
 	"context"
 	"errors"
+	"route256/loms/internal/tracing"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +22,9 @@ func NewRepositoryDB(pool *pgxpool.Pool) *RepositoryDB {
 }
 
 func (r RepositoryDB) CreateOrder(ctx context.Context, userID int64, items []dto.Item) (orderID int64, err error) {
+	ctx, span := tracing.StartFromContext(ctx, "RepositoryDB OrderCreate")
+	defer span.End()
+
 	err = pgx.BeginTxFunc(ctx, r.write, pgx.TxOptions{}, func(tx pgx.Tx) (err error) {
 		repo := New(tx)
 

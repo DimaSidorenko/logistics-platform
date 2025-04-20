@@ -2,11 +2,11 @@ package wrappers
 
 import (
 	"context"
-
-	"google.golang.org/grpc"
-
+	"route256/cart/internal/tracing"
 	cartDto "route256/cart/internal/usecases/cart/dto"
 	desc "route256/cart/pkg/protobuf/rpc/clients"
+
+	"google.golang.org/grpc"
 )
 
 type LomsClient interface {
@@ -36,6 +36,9 @@ func (w *LomsClientWrapper) StocksInfo(ctx context.Context, sku int64) (uint32, 
 }
 
 func (w *LomsClientWrapper) OrderCreate(ctx context.Context, userID cartDto.UserID, items []cartDto.Item) (orderID int64, err error) {
+	ctx, span := tracing.StartFromContext(ctx, "handler /checkout/order")
+	defer span.End()
+
 	var orderItems []*desc.OrderItem
 	for _, item := range items {
 		orderItems = append(orderItems, &desc.OrderItem{
@@ -48,6 +51,9 @@ func (w *LomsClientWrapper) OrderCreate(ctx context.Context, userID cartDto.User
 		User:  int64(userID),
 		Items: orderItems,
 	}
+
+	//Кладем traceID в заголовки через контекст.
+	//ctx = metadata.AppendToOutgoingContext(ctx, "x-trace-id", span.SpanContext().TraceID().String())
 
 	resp, err := w.client.OrderCreate(ctx, req)
 	if err != nil {
