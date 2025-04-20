@@ -1,10 +1,13 @@
 package delete_user
 
 import (
-	"log"
 	"net/http"
-	"route256/cart/internal/usecases/cart/dto"
 	"strconv"
+
+	"github.com/gorilla/mux"
+
+	"route256/cart/internal/logger"
+	"route256/cart/internal/usecases/cart/dto"
 )
 
 type cartClient interface {
@@ -22,14 +25,16 @@ func NewHandler(cartClient cartClient) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	userID, err := strconv.ParseInt(req.PathValue("user_id"), 10, 64)
-	if err != nil || userID == 0 {
+	vars := mux.Vars(req)
+
+	userID, err := strconv.ParseInt(vars["user_id"], 10, 64)
+	if err != nil || userID <= 0 {
 		http.Error(w, "not valid userID", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.cartClient.DeleteUser(dto.UserID(userID)); err != nil {
-		log.Printf("delete user: %v", err)
+		logger.Warnw(req.Context(), "delete user: %v", err)
 		w.WriteHeader(http.StatusPreconditionFailed)
 		return
 	}

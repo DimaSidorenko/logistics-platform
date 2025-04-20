@@ -10,6 +10,9 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -50,6 +53,7 @@ func main() {
 	conn, err := grpc.NewClient(
 		fmt.Sprintf("%s:%d", config.LomsService.Host, config.LomsService.Port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()), // Добавляет заголовки трейсинга
 	)
 	if err != nil {
 		panic(err)
@@ -58,17 +62,20 @@ func main() {
 
 	cartHandler := cart.NewHandler(productClient, wrappers.NewLomsClientWrapper(lomsClient), repository.NewConcurrentMap())
 
-	mux := http.NewServeMux()
+	r := mux.NewRouter()
 
-	mux.Handle("POST /user/{user_id}/cart/{sku_id}", add_item.NewHandler(cartHandler))
-	mux.Handle("DELETE /user/{user_id}/cart/{sku_id}", delete_item.NewHandler(cartHandler))
-	mux.Handle("DELETE /user/{user_id}/cart", delete_user.NewHandler(cartHandler))
-	mux.Handle("GET /user/{user_id}/cart", get_items.NewHandler(cartHandler))
-	mux.Handle("POST /checkout/{user_id}", checkout_order.NewHandler(cartHandler))
+	r.Handle("/user/{user_id}/cart/{sku_id}", add_item.NewHandler(cartHandler)).Methods("POST")
+	r.Handle("/user/{user_id}/cart/{sku_id}", delete_item.NewHandler(cartHandler)).Methods("DELETE")
+	r.Handle("/user/{user_id}/cart", delete_user.NewHandler(cartHandler)).Methods("DELETE")
+	r.Handle("/user/{user_id}/cart", get_items.NewHandler(cartHandler)).Methods("GET")
+	r.Handle("/checkout/{user_id}", checkout_order.NewHandler(cartHandler)).Methods("POST")
+	r.Handle("/metrics", promhttp.Handler()).Methods("GET")
+
+	r.Use(middlewares.NewMetricsMiddleware, middlewares.NewLoggingMiddleware)
 
 	server := &http.Server{
 		Addr:        ":8080",
-		Handler:     middlewares.NewLoggingMiddleware(mux),
+		Handler:     r,
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 120 * time.Second,
 	}

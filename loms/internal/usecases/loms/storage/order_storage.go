@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"route256/loms/internal/tracing"
 	"sync"
 	"time"
 
@@ -54,7 +55,10 @@ func (s *OrderStorage) UpdateOrderStatus(_ context.Context, orderID int64, statu
 	return nil
 }
 
-func (s *OrderStorage) GetOrderByID(_ context.Context, orderID int64) (*dto.Order, error) {
+func (s *OrderStorage) GetOrderByID(ctx context.Context, orderID int64) (*dto.Order, error) {
+	_, span := tracing.StartFromContext(ctx, "Service OrderInfo")
+	defer span.End()
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

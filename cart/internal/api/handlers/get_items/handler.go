@@ -1,18 +1,21 @@
 package get_items
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
+
+	"route256/cart/internal/logger"
 	cartDto "route256/cart/internal/usecases/cart/dto"
 )
 
 type cartClient interface {
-	GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, error)
+	GetItems(ctx context.Context, userID cartDto.UserID) (cartDto.GetItemsResponse, error)
 }
 
 type Handler struct {
@@ -26,20 +29,22 @@ func NewHandler(cartClient cartClient) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	userID, err := strconv.ParseInt(req.PathValue("user_id"), 10, 64)
-	if err != nil || userID == 0 {
+	vars := mux.Vars(req)
+
+	userID, err := strconv.ParseInt(vars["user_id"], 10, 64)
+	if err != nil || userID <= 0 {
 		http.Error(w, "not valid userID", http.StatusBadRequest)
 		return
 	}
 
-	items, err := h.cartClient.GetItems(cartDto.UserID(userID))
+	items, err := h.cartClient.GetItems(req.Context(), cartDto.UserID(userID))
 	if err != nil {
 		if errors.Is(err, cartDto.ErrUserNotFound) {
 			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
 
-		log.Printf("get items: %v", err)
+		logger.Errorw(req.Context(), "get items: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

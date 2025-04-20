@@ -3,14 +3,17 @@ package add_item
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
-	dto2 "route256/cart/internal/usecases/cart/dto"
 	"strconv"
+
+	"github.com/gorilla/mux"
+
+	"route256/cart/internal/logger"
+	cartDto "route256/cart/internal/usecases/cart/dto"
 )
 
 type cartClient interface {
-	AddItem(userID dto2.UserID, skuID dto2.SkuID, quantity uint32) error
+	AddItem(userID cartDto.UserID, skuID cartDto.SkuID, quantity uint32) error
 }
 
 type Handler struct {
@@ -24,12 +27,14 @@ func NewHandler(cartClient cartClient) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	userID, err := strconv.ParseInt(req.PathValue("user_id"), 10, 64)
+	vars := mux.Vars(req)
+
+	userID, err := strconv.ParseInt(vars["user_id"], 10, 64)
 	if err != nil || userID == 0 {
 		http.Error(w, "not valid userID", http.StatusBadRequest)
 		return
 	}
-	skuID, err := strconv.ParseInt(req.PathValue("sku_id"), 10, 64)
+	skuID, err := strconv.ParseInt(vars["sku_id"], 10, 64)
 	if err != nil || skuID == 0 {
 		http.Error(w, "not valid skuID", http.StatusBadRequest)
 		return
@@ -52,8 +57,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := h.cartClient.AddItem(dto2.UserID(userID), dto2.SkuID(skuID), request.Count); err != nil {
-		log.Printf("add item: %v", err)
+	if err := h.cartClient.AddItem(cartDto.UserID(userID), cartDto.SkuID(skuID), request.Count); err != nil {
+		logger.Infow(req.Context(), "add item: %v", err)
 		w.WriteHeader(http.StatusPreconditionFailed)
 		return
 	}

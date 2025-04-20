@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,15 +52,17 @@ func TestGetItems(t *testing.T) {
 	err = storage.AddItem(userID, skuID2, 10)
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	t.Run("existing user", func(t *testing.T) {
-		items, err := storage.GetItems(userID)
+		items, err := storage.GetItems(ctx, userID)
 		require.NoError(t, err)
 		assert.Len(t, items, 2)
 		assert.ElementsMatch(t, items, []dto.Item{{Sku: skuID1, Count: 5}, {Sku: skuID2, Count: 10}})
 	})
 
 	t.Run("non-existing user", func(t *testing.T) {
-		items, err := storage.GetItems(dto.UserID(999))
+		items, err := storage.GetItems(ctx, dto.UserID(999))
 		require.NoError(t, err)
 		assert.Len(t, items, 0)
 	})

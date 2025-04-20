@@ -1,10 +1,13 @@
 package delete_item
 
 import (
-	"log"
 	"net/http"
-	"route256/cart/internal/usecases/cart/dto"
 	"strconv"
+
+	"github.com/gorilla/mux"
+
+	"route256/cart/internal/logger"
+	"route256/cart/internal/usecases/cart/dto"
 )
 
 type cartClient interface {
@@ -22,19 +25,22 @@ func NewHandler(cartClient cartClient) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	userID, err := strconv.ParseInt(req.PathValue("user_id"), 10, 64)
-	if err != nil || userID == 0 {
+	vars := mux.Vars(req)
+
+	userID, err := strconv.ParseInt(vars["user_id"], 10, 64)
+	if err != nil || userID <= 0 {
 		http.Error(w, "not valid userID", http.StatusBadRequest)
 		return
 	}
-	skuID, err := strconv.ParseInt(req.PathValue("sku_id"), 10, 64)
+
+	skuID, err := strconv.ParseInt(vars["sku_id"], 10, 64)
 	if err != nil || skuID == 0 {
 		http.Error(w, "not valid skuID", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.cartClient.DeleteItem(dto.UserID(userID), dto.SkuID(skuID)); err != nil {
-		log.Printf("delete item: %v", err)
+		logger.Warnw(req.Context(), "delete item: %v", err)
 		w.WriteHeader(http.StatusPreconditionFailed)
 		return
 	}

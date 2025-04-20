@@ -23,7 +23,7 @@ POST http://localhost:8084/order/info
 Content-Type: application/json
 
 {
-  "orderID": 2
+  "orderId": 2
 }
 ### expected {"status":"awaiting payment","user":31337,"Items":[{"sku":4487693,"count":3},{"sku":4669069,"count":2}]}
 
@@ -39,11 +39,11 @@ Content-Type: application/json
 
 
 ### check actual status is "payed"
-POST http://localhost:8084/order/info
+GET http://localhost:8084/order/info?orderId=10
 Content-Type: application/json
 
 {
-  "orderID": -1
+  "orderId": 10
 }
 ### expected {"status":"payed","user":31337,"Items":[{"sku":4487693,"count":3},{"sku":4669069,"count":2}]}
 

@@ -5,6 +5,7 @@ package cart
 //go:generate minimock -i route256/cart/internal/usecases/cart.storage -o storage_mock_test.go -n StorageMock -p cart
 
 import (
+	"context"
 	cartDto "route256/cart/internal/usecases/cart/dto"
 	"sync"
 	mm_atomic "sync/atomic"
@@ -46,9 +47,9 @@ type StorageMock struct {
 	beforeGetItemCounter uint64
 	GetItemMock          mStorageMockGetItem
 
-	funcGetItems          func(userID cartDto.UserID) (ia1 []cartDto.Item, err error)
+	funcGetItems          func(ctx context.Context, userID cartDto.UserID) (ia1 []cartDto.Item, err error)
 	funcGetItemsOrigin    string
-	inspectFuncGetItems   func(userID cartDto.UserID)
+	inspectFuncGetItems   func(ctx context.Context, userID cartDto.UserID)
 	afterGetItemsCounter  uint64
 	beforeGetItemsCounter uint64
 	GetItemsMock          mStorageMockGetItems
@@ -1477,11 +1478,13 @@ type StorageMockGetItemsExpectation struct {
 
 // StorageMockGetItemsParams contains parameters of the storage.GetItems
 type StorageMockGetItemsParams struct {
+	ctx    context.Context
 	userID cartDto.UserID
 }
 
 // StorageMockGetItemsParamPtrs contains pointers to parameters of the storage.GetItems
 type StorageMockGetItemsParamPtrs struct {
+	ctx    *context.Context
 	userID *cartDto.UserID
 }
 
@@ -1494,6 +1497,7 @@ type StorageMockGetItemsResults struct {
 // StorageMockGetItemsOrigins contains origins of expectations of the storage.GetItems
 type StorageMockGetItemsExpectationOrigins struct {
 	origin       string
+	originCtx    string
 	originUserID string
 }
 
@@ -1508,7 +1512,7 @@ func (mmGetItems *mStorageMockGetItems) Optional() *mStorageMockGetItems {
 }
 
 // Expect sets up expected params for storage.GetItems
-func (mmGetItems *mStorageMockGetItems) Expect(userID cartDto.UserID) *mStorageMockGetItems {
+func (mmGetItems *mStorageMockGetItems) Expect(ctx context.Context, userID cartDto.UserID) *mStorageMockGetItems {
 	if mmGetItems.mock.funcGetItems != nil {
 		mmGetItems.mock.t.Fatalf("StorageMock.GetItems mock is already set by Set")
 	}
@@ -1521,7 +1525,7 @@ func (mmGetItems *mStorageMockGetItems) Expect(userID cartDto.UserID) *mStorageM
 		mmGetItems.mock.t.Fatalf("StorageMock.GetItems mock is already set by ExpectParams functions")
 	}
 
-	mmGetItems.defaultExpectation.params = &StorageMockGetItemsParams{userID}
+	mmGetItems.defaultExpectation.params = &StorageMockGetItemsParams{ctx, userID}
 	mmGetItems.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmGetItems.expectations {
 		if minimock.Equal(e.params, mmGetItems.defaultExpectation.params) {
@@ -1532,8 +1536,31 @@ func (mmGetItems *mStorageMockGetItems) Expect(userID cartDto.UserID) *mStorageM
 	return mmGetItems
 }
 
-// ExpectUserIDParam1 sets up expected param userID for storage.GetItems
-func (mmGetItems *mStorageMockGetItems) ExpectUserIDParam1(userID cartDto.UserID) *mStorageMockGetItems {
+// ExpectCtxParam1 sets up expected param ctx for storage.GetItems
+func (mmGetItems *mStorageMockGetItems) ExpectCtxParam1(ctx context.Context) *mStorageMockGetItems {
+	if mmGetItems.mock.funcGetItems != nil {
+		mmGetItems.mock.t.Fatalf("StorageMock.GetItems mock is already set by Set")
+	}
+
+	if mmGetItems.defaultExpectation == nil {
+		mmGetItems.defaultExpectation = &StorageMockGetItemsExpectation{}
+	}
+
+	if mmGetItems.defaultExpectation.params != nil {
+		mmGetItems.mock.t.Fatalf("StorageMock.GetItems mock is already set by Expect")
+	}
+
+	if mmGetItems.defaultExpectation.paramPtrs == nil {
+		mmGetItems.defaultExpectation.paramPtrs = &StorageMockGetItemsParamPtrs{}
+	}
+	mmGetItems.defaultExpectation.paramPtrs.ctx = &ctx
+	mmGetItems.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmGetItems
+}
+
+// ExpectUserIDParam2 sets up expected param userID for storage.GetItems
+func (mmGetItems *mStorageMockGetItems) ExpectUserIDParam2(userID cartDto.UserID) *mStorageMockGetItems {
 	if mmGetItems.mock.funcGetItems != nil {
 		mmGetItems.mock.t.Fatalf("StorageMock.GetItems mock is already set by Set")
 	}
@@ -1556,7 +1583,7 @@ func (mmGetItems *mStorageMockGetItems) ExpectUserIDParam1(userID cartDto.UserID
 }
 
 // Inspect accepts an inspector function that has same arguments as the storage.GetItems
-func (mmGetItems *mStorageMockGetItems) Inspect(f func(userID cartDto.UserID)) *mStorageMockGetItems {
+func (mmGetItems *mStorageMockGetItems) Inspect(f func(ctx context.Context, userID cartDto.UserID)) *mStorageMockGetItems {
 	if mmGetItems.mock.inspectFuncGetItems != nil {
 		mmGetItems.mock.t.Fatalf("Inspect function is already set for StorageMock.GetItems")
 	}
@@ -1581,7 +1608,7 @@ func (mmGetItems *mStorageMockGetItems) Return(ia1 []cartDto.Item, err error) *S
 }
 
 // Set uses given function f to mock the storage.GetItems method
-func (mmGetItems *mStorageMockGetItems) Set(f func(userID cartDto.UserID) (ia1 []cartDto.Item, err error)) *StorageMock {
+func (mmGetItems *mStorageMockGetItems) Set(f func(ctx context.Context, userID cartDto.UserID) (ia1 []cartDto.Item, err error)) *StorageMock {
 	if mmGetItems.defaultExpectation != nil {
 		mmGetItems.mock.t.Fatalf("Default expectation is already set for the storage.GetItems method")
 	}
@@ -1597,14 +1624,14 @@ func (mmGetItems *mStorageMockGetItems) Set(f func(userID cartDto.UserID) (ia1 [
 
 // When sets expectation for the storage.GetItems which will trigger the result defined by the following
 // Then helper
-func (mmGetItems *mStorageMockGetItems) When(userID cartDto.UserID) *StorageMockGetItemsExpectation {
+func (mmGetItems *mStorageMockGetItems) When(ctx context.Context, userID cartDto.UserID) *StorageMockGetItemsExpectation {
 	if mmGetItems.mock.funcGetItems != nil {
 		mmGetItems.mock.t.Fatalf("StorageMock.GetItems mock is already set by Set")
 	}
 
 	expectation := &StorageMockGetItemsExpectation{
 		mock:               mmGetItems.mock,
-		params:             &StorageMockGetItemsParams{userID},
+		params:             &StorageMockGetItemsParams{ctx, userID},
 		expectationOrigins: StorageMockGetItemsExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmGetItems.expectations = append(mmGetItems.expectations, expectation)
@@ -1639,17 +1666,17 @@ func (mmGetItems *mStorageMockGetItems) invocationsDone() bool {
 }
 
 // GetItems implements storage
-func (mmGetItems *StorageMock) GetItems(userID cartDto.UserID) (ia1 []cartDto.Item, err error) {
+func (mmGetItems *StorageMock) GetItems(ctx context.Context, userID cartDto.UserID) (ia1 []cartDto.Item, err error) {
 	mm_atomic.AddUint64(&mmGetItems.beforeGetItemsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetItems.afterGetItemsCounter, 1)
 
 	mmGetItems.t.Helper()
 
 	if mmGetItems.inspectFuncGetItems != nil {
-		mmGetItems.inspectFuncGetItems(userID)
+		mmGetItems.inspectFuncGetItems(ctx, userID)
 	}
 
-	mm_params := StorageMockGetItemsParams{userID}
+	mm_params := StorageMockGetItemsParams{ctx, userID}
 
 	// Record call args
 	mmGetItems.GetItemsMock.mutex.Lock()
@@ -1668,9 +1695,14 @@ func (mmGetItems *StorageMock) GetItems(userID cartDto.UserID) (ia1 []cartDto.It
 		mm_want := mmGetItems.GetItemsMock.defaultExpectation.params
 		mm_want_ptrs := mmGetItems.GetItemsMock.defaultExpectation.paramPtrs
 
-		mm_got := StorageMockGetItemsParams{userID}
+		mm_got := StorageMockGetItemsParams{ctx, userID}
 
 		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmGetItems.t.Errorf("StorageMock.GetItems got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmGetItems.GetItemsMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
 
 			if mm_want_ptrs.userID != nil && !minimock.Equal(*mm_want_ptrs.userID, mm_got.userID) {
 				mmGetItems.t.Errorf("StorageMock.GetItems got unexpected parameter userID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
@@ -1689,9 +1721,9 @@ func (mmGetItems *StorageMock) GetItems(userID cartDto.UserID) (ia1 []cartDto.It
 		return (*mm_results).ia1, (*mm_results).err
 	}
 	if mmGetItems.funcGetItems != nil {
-		return mmGetItems.funcGetItems(userID)
+		return mmGetItems.funcGetItems(ctx, userID)
 	}
-	mmGetItems.t.Fatalf("Unexpected call to StorageMock.GetItems. %v", userID)
+	mmGetItems.t.Fatalf("Unexpected call to StorageMock.GetItems. %v %v", ctx, userID)
 	return
 }
 

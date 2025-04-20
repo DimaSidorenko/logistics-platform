@@ -1,5 +1,9 @@
 version: '3.8'
 
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
+
 services:
   product-service:
     image: gitlab-registry.ozon.dev/go/classroom-16/students/base/products:latest
@@ -46,7 +50,7 @@ services:
     depends_on:
       - kafka0
     ports:
-      - 8080:8080
+      - 8180:8180
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka0:29092
@@ -79,3 +83,29 @@ services:
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
       cub kafka-ready -b kafka0:29092 1 30 && \
       kafka-topics --create --topic loms.order-events --partitions 2 --replication-factor 1 --if-not-exists --bootstrap-server kafka0:29092'"
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"

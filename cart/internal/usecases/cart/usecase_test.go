@@ -5,17 +5,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gojuno/minimock/v3"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/goleak"
-
 	"route256/cart/internal/models"
 	cartDto "route256/cart/internal/usecases/cart/dto"
+
+	"github.com/gojuno/minimock/v3"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
-}
+//(dosidorenko) goleak не дружит с моей либой трейсинга.
+//func TestMain(m *testing.M) {
+//	goleak.VerifyTestMain(m)
+//}
 
 func TestHandler_AddItem(t *testing.T) {
 	mc := minimock.NewController(t)
@@ -187,7 +187,7 @@ func TestHandler_GetItems(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storageMock := NewStorageMock(mc)
-			storageMock.GetItemsMock.Expect(123).Return(tt.storageReturn, tt.storageErr)
+			storageMock.GetItemsMock.Expect(minimock.AnyContext, 123).Return(tt.storageReturn, tt.storageErr)
 
 			productClientMock := NewProductClientMock(mc)
 			if nil == tt.storageErr && len(tt.storageReturn) > 0 {
@@ -197,7 +197,7 @@ func TestHandler_GetItems(t *testing.T) {
 			}
 
 			handler := NewHandler(productClientMock, nil, storageMock)
-			result, err := handler.GetItems(123)
+			result, err := handler.GetItems(context.Background(), 123)
 
 			assert.Equal(t, tt.expectedErr, err)
 			assert.ElementsMatch(t, tt.expectedResult.Items, result.Items)

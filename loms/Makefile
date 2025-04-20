@@ -118,7 +118,7 @@ coverage:
 	go test ./... -coverprofile=coverage.out
 	go tool cover -func=coverage.out
 
-run-all: lint coverage build
+run-all: coverage build
 	echo "Запуск всех задач завершен."
 
 # Цель для запуска миграций

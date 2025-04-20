@@ -7,6 +7,7 @@ package cart
 import (
 	"context"
 	"fmt"
+	"route256/cart/internal/tracing"
 	"sort"
 	"sync"
 
@@ -24,7 +25,7 @@ type storage interface {
 	AddItem(userID cartDto.UserID, skuID cartDto.SkuID, quantity uint32) error
 	DeleteItem(userID cartDto.UserID, skuID cartDto.SkuID) error
 	DeleteUser(userID cartDto.UserID) error
-	GetItems(userID cartDto.UserID) ([]cartDto.Item, error)
+	GetItems(ctx context.Context, userID cartDto.UserID) ([]cartDto.Item, error)
 }
 
 type productClient interface {
@@ -52,13 +53,16 @@ func NewHandler(productClient productClient, lomsClient lomsClient, storage stor
 	}
 }
 
-func (c *Handler) Checkout(userID cartDto.UserID) (orderID int64, err error) {
-	resp, err := c.GetItems(userID)
+func (c *Handler) Checkout(ctx context.Context, userID cartDto.UserID) (orderID int64, err error) {
+	ctx, span := tracing.StartFromContext(ctx, "handler /checkout/order")
+	defer span.End()
+
+	resp, err := c.GetItems(ctx, userID)
 	if err != nil {
 		return 0, err
 	}
 
-	orderID, err = c.lomsClient.OrderCreate(context.TODO(), userID, resp.Items)
+	orderID, err = c.lomsClient.OrderCreate(ctx, userID, resp.Items)
 	if err != nil {
 		st, ok := status.FromError(err)
 		if ok {
@@ -111,8 +115,11 @@ func (c *Handler) DeleteUser(userID cartDto.UserID) error {
 	return nil
 }
 
-func (c *Handler) GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, error) {
-	items, err := c.storage.GetItems(userID)
+func (c *Handler) GetItems(ctx context.Context, userID cartDto.UserID) (cartDto.GetItemsResponse, error) {
+	ctx, span := tracing.StartFromContext(ctx, "cart usecase GetItems")
+	defer span.End()
+
+	items, err := c.storage.GetItems(ctx, userID)
 	if err != nil {
 		return cartDto.GetItemsResponse{}, fmt.Errorf("get items: %v", err)
 	}
@@ -138,6 +145,7 @@ func (c *Handler) GetItems(userID cartDto.UserID) (cartDto.GetItemsResponse, err
 				return fmt.Errorf("get item in product service: %v", err)
 			}
 
+			//nolint:gosec
 			price := uint32(item.Price)
 
 			func() {

@@ -7,3 +7,4 @@ build: cart-build loms-build notifier-build comments-build
 
 run-migrations:
 	$(info run-migrations for all project)
+
